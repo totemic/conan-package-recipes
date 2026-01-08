@@ -1,0 +1,34 @@
+[settings]
+os=Linux
+#os_build=Linux
+arch=armv8
+#arch_build=x86_64
+compiler=gcc
+compiler.version=8
+compiler.libcxx=libstdc++11
+build_type=Release
+
+ne-10:build_type=Release
+sensor-processor:build_type=Release
+tensorflow-lite:build_type=Release
+abseil:build_type=Release
+eigen:build_type=Release
+farmhash:build_type=Release
+fft:build_type=Release
+fp16:build_type=Release
+gemmlowp:build_type=Release
+pthreadpool:build_type=Release
+ruy:build_type=Release
+xnnpack:build_type=Release
+
+[options]
+[build_requires]
+[env]
+# same as tools.cmake.cmaketoolchain:system_processor but for Conan 1 cmake generator
+CONAN_CMAKE_SYSTEM_PROCESSOR=aarch64
+[conf]
+tools.gnu:define_libcxx11_abi=True
+# needed for "cpuinfo" recipe, which errors out with the default CMAKE_SYSTEM_PROCESSOR=armv8 instead of the required aarch64 (which is not supported by conan)
+tools.cmake.cmaketoolchain:system_processor=aarch64
+# Reduce the number of parallel builds, needed to make tensorflow Lite compile without errors
+#tools.build:jobs=1

@@ -1,0 +1,61 @@
+# CLion remote docker environment (How to build docker container, run and stop it)
+# inspired by https://blog.jetbrains.com/clion/2020/01/using-docker-with-clion/
+#
+# Build and run:
+#   docker build -t clion/remote-cpp-env:0.5 -f Dockerfile.remote-cpp-env .
+#   docker run -d --cap-add sys_ptrace -p127.0.0.1:2222:22 --name clion_remote_env clion/remote-cpp-env:0.5
+#   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
+#
+# stop:
+#   docker stop clion_remote_env
+# 
+# ssh credentials (conan user):
+#     user: conan
+# password: conan
+
+ARG TAG=conanio/gcc8-armv8:latest
+
+FROM ${TAG}
+
+ARG SSH_KEY
+ARG UID
+ARG GID
+
+USER root
+
+# auto update conan to latest to prevent build errors from unsupported conan features
+RUN apt-get update \
+  && apt-get install -y ssh \
+      gdbserver \
+      gdb \
+      rsync \
+  && sudo pip3 install "conan<2.0.0" --upgrade \
+  && apt-get clean
+
+RUN ( \
+    echo 'PermitUserEnvironment yes'; \
+    echo 'LogLevel DEBUG2'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+  ) > /etc/ssh/sshd_config_test_clion \
+  && mkdir /run/sshd \
+  && mkdir /home/conan/.ssh \
+  && echo "${SSH_KEY}" >> /home/conan/.ssh/authorized_keys
+
+#  && echo "set -a; source /etc/environment; set +a;" >> /etc/profile
+# Changing user id and group id of conan user.
+RUN usermod -u "${UID}" conan # && usermod -g "${GID}" conan
+# Because this container is based off conanio/gcc8-armv8:latest, conan user is already created with user id 1000 and group id 1001
+# Various python packages at that point and cause permission issue with the user id change. In order to have these files with the
+# right permissions we need to search for all files with that user id as the owner and change their ownership to the new user id.
+RUN find /opt/pyenv/shims -user 1000 -exec chown -h conan {} \;
+#RUN find  /opt/pyenv/shims -group 1001 -exec chgrp -h conan {} \;
+
+#CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
+# ensure variables passed to docker container are also exposed to ssh sessions
+# https://github.com/jenkinsci/docker-ssh-agent/issues/33
+# also create a directory in the container that represents the users home in the host - we use ${CONAN_USER_HOME} for that purose
+CMD env | egrep -v "^(HOME=|USER=|MAIL=|LC_ALL=|LS_COLORS=|LANG=|HOSTNAME=|PWD=|TERM=|SHLVL=|LANGUAGE=|_=)" >> /home/conan/.ssh/environment \
+    && if [ "${CONAN_USER_HOME}" ]; then mkdir -p "${CONAN_USER_HOME}" && chown conan "${CONAN_USER_HOME}"; fi \
+    && exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config_test_clion

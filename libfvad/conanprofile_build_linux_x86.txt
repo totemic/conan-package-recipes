@@ -1,0 +1,29 @@
+#standalone_toolchain=/usr/lib/x86_64-linux-gnu
+target_host=x86_64-linux-gnu
+cc_compiler=gcc
+cxx_compiler=g++-8
+
+[settings]
+os=Linux
+arch=x86_64
+# Need to set the values below to fix error when building libcurl: libtool/2.4.6: 'settings.compiler' value not defined
+# this is needed for building native tools executed on the build machine
+compiler=gcc
+compiler.version=8
+compiler.libcxx=libstdc++11
+build_type=Release
+
+[env]
+#CONAN_CMAKE_FIND_ROOT_PATH=$standalone_toolchain/$target_host
+#CONAN_CMAKE_SYSROOT=$standalone_toolchain/$target_host/sysroot
+#PATH=[$standalone_toolchain/bin]
+AR=$target_host-ar
+AS=$target_host-as
+CHOST=$target_host
+CC=$target_host-$cc_compiler
+CXX=$target_host-$cxx_compiler
+#CXXFLAGS=-I"$standalone_toolchain/$target_host/lib/include"
+LD=$target_host-ld
+NM=$target_host-nm
+RANLIB=$target_host-ranlib
+STRIP=$target_host-strip
