@@ -1,0 +1,30 @@
+--- CMakeLists.txt.orig	2024-01-01 00:00:00.000000000 +0000
++++ CMakeLists.txt	2024-01-01 00:00:00.000000000 +0000
+@@ -1,4 +1,20 @@
+ cmake_minimum_required(VERSION 3.9)
+ project(agc)
+
+-add_executable(agc main.c agc.c)
++# Build library
++add_library(webrtc_agc agc.c)
++
++# Set library properties
++set_target_properties(webrtc_agc PROPERTIES
++    PUBLIC_HEADER agc.h
++    VERSION 1.0.0
++    SOVERSION 1
++)
++
++# Optional: Build example executable
++option(BUILD_EXAMPLE "Build example executable" OFF)
++if(BUILD_EXAMPLE)
++    add_executable(agc_example main.c)
++    target_link_libraries(agc_example webrtc_agc)
++endif()
++
++# Install library and headers
++install(TARGETS webrtc_agc
++    LIBRARY DESTINATION lib
++    ARCHIVE DESTINATION lib
++    PUBLIC_HEADER DESTINATION include
++)
